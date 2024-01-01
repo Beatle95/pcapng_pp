@@ -14,7 +14,7 @@ namespace pcapng_pp {
     class PcapngError : public std::exception {
         public:
             PcapngError(ErrorCode code);
-            const char *what() const final;
+            const char *what() const noexcept final;
 
         private:
             const ErrorCode code_;

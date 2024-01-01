@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 #include <utility>
+#include <list>
+#include <vector>
 #include "Types.h"
 
 namespace pcapng_pp {

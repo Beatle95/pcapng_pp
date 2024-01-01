@@ -7,7 +7,7 @@ PcapngError::PcapngError(ErrorCode code)
 {    
 }
 
-const char* PcapngError::what() const {
+const char* PcapngError::what() const noexcept {
     switch (code_) {
         case ErrorCode::undefined:
             return "Unknown error";
