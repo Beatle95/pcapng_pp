@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include "path.h"
-#include "PcapngFileReader.h"
+#include "pcapng_file_reader.h"
 
 void try_open(std::string_view name) {
     const auto file_path {std::filesystem::u8path(test_resources_path) / name};

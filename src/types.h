@@ -5,7 +5,7 @@
 #include <vector>
 #include <list>
 #include <string>
-#include "PcapngBlockBody.h"
+#include "pcapng_block_body.h"
 
 constexpr size_t max_supported_interface_blocks {32};
 

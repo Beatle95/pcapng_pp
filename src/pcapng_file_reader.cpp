@@ -1,8 +1,8 @@
-#include "PcapngFileReader.h"
+#include "pcapng_file_reader.h"
 #include <array>
 #include <assert.h>
 #include <optional>
-#include "PcapngError.h"
+#include "pcapng_error.h"
 
 using namespace pcapng_pp;
 

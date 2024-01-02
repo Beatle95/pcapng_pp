@@ -5,7 +5,7 @@
 #include <utility>
 #include <list>
 #include <vector>
-#include "Types.h"
+#include "types.h"
 
 namespace pcapng_pp {
     /*

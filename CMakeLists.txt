@@ -19,11 +19,12 @@ set(CMAKE_CXX_EXTENSIONS       OFF)
 
 add_library(
     ${PROJECT_NAME} STATIC
-    src/PcapngFileReader.h
-    src/PcapngFileReader.cpp
-    src/PcapngError.h
-    src/PcapngError.cpp
-    src/Types.h
+    src/pcapng_file_reader.h
+    src/pcapng_file_reader.cpp
+    src/pcapng_error.h
+    src/pcapng_error.cpp
+    src/pcapng_block_body.h
+    src/types.h
 )
 
 target_include_directories(
