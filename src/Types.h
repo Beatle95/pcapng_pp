@@ -29,9 +29,9 @@ namespace pcapng_pp {
         std::string hardware_desc;
         std::string os_desc;
         std::string user_app_desc;
-        size_t interface_block_count;
-        uint16_t major_version;
-        uint16_t minor_version;
+        size_t interface_block_count {};
+        uint16_t major_version {};
+        uint16_t minor_version {};
     };
 }
 #endif // __INTERANTYPES_H__

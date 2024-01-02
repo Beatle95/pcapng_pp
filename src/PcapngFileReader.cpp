@@ -9,8 +9,14 @@ using namespace pcapng_pp;
 constexpr size_t block_required_len {sizeof(uint32_t) * 3};
 constexpr size_t blocks_alignment {4};
 constexpr size_t pcapng_section_header_len {16};
+
 constexpr uint32_t section_header_block {0x0A0D0D0A};
-constexpr uint16_t opt_endofopt	{0};
+
+constexpr uint16_t option_endofopt	{0};
+constexpr uint16_t option_comment {1};
+constexpr uint16_t option_shb_hardware {2};
+constexpr uint16_t option_shb_os {3};
+constexpr uint16_t option_shb_userappl {4};
 
 namespace {
     template<typename T>
@@ -41,7 +47,7 @@ namespace {
         assert(size != 0);
         std::list<PcapngOption> result;
         for (size_t offset {0}; offset < size;) {
-            if (offset + 2 * sizeof(uint16_t) >= size) {
+            if (offset + 2 * sizeof(uint16_t) > size) {
                 throw PcapngError {ErrorCode::wrong_format_or_damaged};
             }
 
@@ -51,7 +57,7 @@ namespace {
             const auto len {*reinterpret_cast<const uint16_t*>(&data[offset])};
             offset += sizeof(uint16_t);
 
-            if (new_opt.custom_option_code == opt_endofopt) {
+            if (new_opt.custom_option_code == option_endofopt) {
                 break;
             }
 
@@ -114,7 +120,6 @@ void PcapngFileReader::open() {
     if (!file_stream_.good()) {
         throw PcapngError {ErrorCode::unable_to_open};
     }
-
     // TODO: take to a consideration magic number and endianness
     // TODO: add support for compressed files
 
@@ -124,11 +129,8 @@ void PcapngFileReader::open() {
     if (block_ptr->block_type != section_header_block) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
-
-    PcapngSectionHeader *section_header {dynamic_cast<PcapngSectionHeader*>(block_ptr->block_body.get())};
-    file_info_.major_version = section_header->major_version;
-    file_info_.minor_version = section_header->minor_version;
-
+    fill_file_info(block_ptr.get());
+    // TODO: we may want to implement fast interface loading here
     is_opened_ = true;
 }
 
@@ -176,6 +178,8 @@ void PcapngFileReader::parse_block(PcapngBlock *block, const std::vector<char>& 
         case section_header_block:
             parse_section_header_block(block, data);
             break;
+
+        // TODO: other block types
         
         default:
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -217,5 +221,32 @@ void PcapngFileReader::parse_section_header_block(PcapngBlock *block, const std:
 
     if (data.size() > pcapng_section_header_len) {
         block->options = parse_options(data.data() + pcapng_section_header_len, data.size() - pcapng_section_header_len);
+    }
+}
+
+void PcapngFileReader::fill_file_info(PcapngBlock *block_ptr) {
+    assert(block_ptr != nullptr);
+    auto section_header {dynamic_cast<PcapngSectionHeader*>(block_ptr->block_body.get())};
+    file_info_.major_version = section_header->major_version;
+    file_info_.minor_version = section_header->minor_version;
+    
+    for (auto&& opt : block_ptr->options) {
+        switch (opt.custom_option_code) {
+            case option_comment:
+                file_info_.file_comment = std::string {opt.data.begin(), opt.data.end()};
+                break;
+
+            case option_shb_hardware:
+                file_info_.hardware_desc = std::string {opt.data.begin(), opt.data.end()};
+                break;
+
+            case option_shb_os:
+                file_info_.os_desc = std::string {opt.data.begin(), opt.data.end()};
+                break;
+
+            case option_shb_userappl:
+                file_info_.user_app_desc = std::string {opt.data.begin(), opt.data.end()};
+                break;
+        }
     }
 }

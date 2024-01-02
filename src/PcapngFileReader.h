@@ -27,6 +27,7 @@ namespace pcapng_pp {
             std::unique_ptr<PcapngBlock> read_next_record();
             void parse_block(PcapngBlock *block, const std::vector<char>& data);
             void parse_section_header_block(PcapngBlock *block, const std::vector<char>& data);
+            void fill_file_info(PcapngBlock *block_ptr);
 
         private:
             const std::filesystem::path file_path_;
