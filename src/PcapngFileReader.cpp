@@ -6,8 +6,9 @@
 
 using namespace pcapng_pp;
 
-constexpr size_t block_musthave_fields_len {sizeof(uint32_t) * 3};
+constexpr size_t block_required_len {sizeof(uint32_t) * 3};
 constexpr size_t blocks_alignment {4};
+constexpr size_t pcapng_section_header_len {16};
 constexpr uint32_t section_header_block {0x0A0D0D0A};
 constexpr uint16_t opt_endofopt	{0};
 
@@ -18,6 +19,52 @@ namespace {
         stream.read(reinterpret_cast<char*>(&result), sizeof(result));
         if (stream.gcount() != sizeof(result))
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
+        return result;
+    }
+    
+    // Options structure.
+    //                      1                   2                   3
+    //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |      Option Code              |         Option Length         |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // /                       Option Value                            /
+    // /              variable length, padded to 32 bits               /
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // /                                                               /
+    // /                 . . . other options . . .                     /
+    // /                                                               /
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // |   Option Code == opt_endofopt |   Option Length == 0          |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    std::list<PcapngOption> parse_options(const char *data, size_t size) {
+        assert(size != 0);
+        std::list<PcapngOption> result;
+        for (size_t offset {0}; offset < size;) {
+            if (offset + 2 * sizeof(uint16_t) >= size) {
+                throw PcapngError {ErrorCode::wrong_format_or_damaged};
+            }
+
+            PcapngOption new_opt {};
+            new_opt.custom_option_code = *reinterpret_cast<const uint16_t*>(&data[offset]);
+            offset += sizeof(uint16_t);
+            const auto len {*reinterpret_cast<const uint16_t*>(&data[offset])};
+            offset += sizeof(uint16_t);
+
+            if (new_opt.custom_option_code == opt_endofopt) {
+                break;
+            }
+
+            const auto alignment {sizeof(uint32_t)};
+            const auto actual_len {len % alignment == 0 ? len : (len / alignment + 1) * alignment};
+            if (offset + actual_len >= size) {
+                throw PcapngError {ErrorCode::wrong_format_or_damaged};
+            }
+            new_opt.data.insert(new_opt.data.end(), &data[offset], &data[offset + len]);
+            offset += actual_len;
+
+            result.emplace_back(std::move(new_opt));
+        }
         return result;
     }
 }
@@ -67,31 +114,21 @@ void PcapngFileReader::open() {
     if (!file_stream_.good()) {
         throw PcapngError {ErrorCode::unable_to_open};
     }
-    // TODO: later we could add support for compressed files here
+
+    // TODO: take to a consideration magic number and endianness
+    // TODO: add support for compressed files
 
     // read section header block
     auto&& block_ptr {read_next_record()};
     assert(block_ptr);
-    if (block_ptr->block_type != section_header_block
-        || block_ptr->block_body.size() < sizeof(PcapngSectionHeader)
-    ) {
+    if (block_ptr->block_type != section_header_block) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
 
-    // TODO: we must take to a consideration magic number
-    PcapngSectionHeader *section_header {reinterpret_cast<PcapngSectionHeader*>(block_ptr->block_body.data())};
+    PcapngSectionHeader *section_header {dynamic_cast<PcapngSectionHeader*>(block_ptr->block_body.get())};
     file_info_.major_version = section_header->major_version;
     file_info_.minor_version = section_header->minor_version;
 
-    if (block_ptr->block_body.size() - sizeof(PcapngSectionHeader) > sizeof(uint16_t) * 2) {
-        const auto options {read_options(
-            block_ptr->block_body.begin() + sizeof(PcapngSectionHeader), 
-            block_ptr->block_body.end()
-        )};
-        for (auto&& elem : options) {
-            // TODO:
-        }
-    }
     is_opened_ = true;
 }
 
@@ -114,10 +151,10 @@ std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_record() {
     }
     const auto len {read_value_from_stream<uint32_t>(file_stream_)};
     // len of block must be on a 32 bit boundary
-    if ((len % blocks_alignment) != 0 || len < block_musthave_fields_len) {
+    if ((len % blocks_alignment) != 0 || len < block_required_len) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
-    std::vector<char> data(len - block_musthave_fields_len);
+    std::vector<char> data(len - block_required_len);
     file_stream_.read(data.data(), data.size());
     if (file_stream_.gcount() != data.size()) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -130,46 +167,55 @@ std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_record() {
     auto block_ptr {std::make_unique<PcapngBlock>()};
     block_ptr->block_type = type;
     block_ptr->block_total_length = len;
-    block_ptr->block_body = std::move(data);
+    parse_block(block_ptr.get(), data);
     return block_ptr;
 }
 
-// Options structure.
-//                      1                   2                   3
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      Option Code              |         Option Length         |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// /                       Option Value                            /
-// /              variable length, padded to 32 bits               /
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// /                                                               /
-// /                 . . . other options . . .                     /
-// /                                                               /
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |   Option Code == opt_endofopt |   Option Length == 0          |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-std::list<PcapngOption> PcapngFileReader::read_options(
-    std::vector<char>::iterator begin, 
-    std::vector<char>::iterator end
-) {
-    // TODO: read options
-    assert(std::distance(begin, end) > sizeof(uint16_t) * 2);
-    std::list<PcapngOption> result;
-    // for (;;) {
-    //     PcapngOption new_opt {};
-    //     new_opt.custom_option_code = read_value_from_stream<uint16_t>(file_stream_);
-    //     if (new_opt.custom_option_code == opt_endofopt)
-    //         break;
-    //     new_opt.data.resize(read_value_from_stream<uint16_t>(file_stream_));        
-    //     file_stream_.read(new_opt.data.data(), new_opt.data.size());
-    //     if (file_stream_.gcount() != new_opt.data.size())
-    //         throw PcapngError {ErrorCode::wrong_format_or_damaged};
-    //     result.emplace_back(std::move(new_opt));
-    //     const auto padding {new_opt.data.size() % blocks_alignment};
-    //     file_stream_.ignore(padding);
-    //     if (file_stream_.gcount() != padding)
-    //         throw PcapngError {ErrorCode::wrong_format_or_damaged};
-    // }
-    return result;
+void PcapngFileReader::parse_block(PcapngBlock *block, const std::vector<char>& data) {
+    switch (block->block_type) {
+        case section_header_block:
+            parse_section_header_block(block, data);
+            break;
+        
+        default:
+            throw PcapngError {ErrorCode::wrong_format_or_damaged};
+    }
+}
+
+void PcapngFileReader::parse_section_header_block(PcapngBlock *block, const std::vector<char>& data) {
+    //                             1                   2                   3
+    //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //  0 |                   Block Type = 0x0A0D0D0A                     |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //  4 |                      Block Total Length                       |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //  8 |                      Byte-Order Magic                         |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // 12 |          Major Version        |         Minor Version         |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // 16 |                                                               |
+    //    |                          Section Length                       |
+    //    |                                                               |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    // 24 /                                                               /
+    //    /                      Options (variable)                       /
+    //    /                                                               /
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    //    |                      Block Total Length                       |
+    //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    if (data.size() < pcapng_section_header_len) {
+        throw PcapngError {ErrorCode::wrong_format_or_damaged};
+    }
+    auto header {std::make_unique<PcapngSectionHeader>()};
+    int offset {0};
+    header->byteorder_magic = *reinterpret_cast<const uint32_t*>(data.data() + std::exchange(offset, offset + sizeof(uint32_t)));
+    header->major_version = *reinterpret_cast<const uint16_t*>(data.data() + std::exchange(offset, offset + sizeof(uint16_t)));
+    header->minor_version = *reinterpret_cast<const uint16_t*>(data.data() + std::exchange(offset, offset + sizeof(uint16_t)));
+    header->section_length = *reinterpret_cast<const uint64_t*>(data.data() + offset);
+    block->block_body = std::move(header);
+
+    if (data.size() > pcapng_section_header_len) {
+        block->options = parse_options(data.data() + pcapng_section_header_len, data.size() - pcapng_section_header_len);
+    }
 }

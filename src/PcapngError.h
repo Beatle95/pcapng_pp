@@ -7,8 +7,7 @@ namespace pcapng_pp {
         undefined,
         unable_to_open,
         wrong_format_or_damaged,
-        size_mismatch,
-        not_enough_memory
+        size_mismatch
     };
 
     class PcapngError : public std::exception {

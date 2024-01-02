@@ -3,39 +3,35 @@
 #include <array>
 #include <cstdint>
 #include <vector>
+#include <list>
 #include <string>
+#include "PcapngBlockBody.h"
 
 constexpr size_t max_supported_interface_blocks {32};
 
-namespace pcapng_pp {    
+namespace pcapng_pp {
+    struct PcapngOption {
+        std::vector<char> data;
+        uint16_t custom_option_code;
+    };
+
     struct PcapngBlock {
+        std::list<PcapngOption> options;
+        std::unique_ptr<PcapngBlockBody> block_body;
         uint32_t block_type;
 	    uint32_t block_total_length;
-        std::vector<char> block_body;
-    };
-
-    struct PcapngSectionHeader {
-        uint32_t byteorder_magic;
-        uint16_t major_version;
-        uint16_t minor_version;
-        uint64_t section_length;
-    };
-
-    struct PcapngOption {
-        uint16_t custom_option_code;
-        std::vector<char> data;
     };
 
     struct PcapngFileInfo {
-        uint16_t major_version;
-        uint16_t minor_version;
+        std::array<double, max_supported_interface_blocks> timestamp_resolution;
+        std::array<uint16_t, max_supported_interface_blocks> link_types;
         std::string file_comment;
         std::string hardware_desc;
         std::string os_desc;
         std::string user_app_desc;
         size_t interface_block_count;
-        std::array<uint16_t, max_supported_interface_blocks> link_types;
-        std::array<double, max_supported_interface_blocks> timestamp_resolution;
+        uint16_t major_version;
+        uint16_t minor_version;
     };
 }
 #endif // __INTERANTYPES_H__
