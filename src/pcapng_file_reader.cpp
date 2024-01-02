@@ -230,22 +230,27 @@ void PcapngFileReader::fill_file_info(PcapngBlock *block_ptr) {
     file_info_.major_version = section_header->major_version;
     file_info_.minor_version = section_header->minor_version;
     
+    const auto update_string {[](std::string&& new_val, std::string& val_to_upd) {
+        val_to_upd = std::move(new_val);
+        // remove everything after first null-terminator
+        val_to_upd.erase(std::find(val_to_upd.begin(), val_to_upd.end(), '\0'), val_to_upd.end());
+    }};
     for (auto&& opt : block_ptr->options) {
         switch (opt.custom_option_code) {
             case option_comment:
-                file_info_.file_comment = std::string {opt.data.begin(), opt.data.end()};
+                update_string(std::string {opt.data.begin(), opt.data.end()}, file_info_.file_comment);
                 break;
 
             case option_shb_hardware:
-                file_info_.hardware_desc = std::string {opt.data.begin(), opt.data.end()};
+                update_string(std::string {opt.data.begin(), opt.data.end()}, file_info_.hardware_desc);
                 break;
 
             case option_shb_os:
-                file_info_.os_desc = std::string {opt.data.begin(), opt.data.end()};
+                update_string(std::string {opt.data.begin(), opt.data.end()}, file_info_.os_desc);
                 break;
 
             case option_shb_userappl:
-                file_info_.user_app_desc = std::string {opt.data.begin(), opt.data.end()};
+                update_string(std::string {opt.data.begin(), opt.data.end()}, file_info_.user_app_desc);
                 break;
         }
     }
