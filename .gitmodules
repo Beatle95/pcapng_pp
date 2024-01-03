@@ -1,3 +1,6 @@
 [submodule "3rdparty/googletest"]
 	path = 3rdparty/googletest
 	url = https://github.com/google/googletest
+[submodule "3rdparty/span"]
+	path = 3rdparty/span
+	url = https://github.com/tcbrindle/span.git
