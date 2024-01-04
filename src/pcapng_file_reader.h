@@ -5,7 +5,8 @@
 #include <utility>
 #include <list>
 #include <vector>
-#include "types.h"
+#include "pcapng_block.h"
+#include "packet.h"
 
 namespace pcapng_pp {
     /*
@@ -22,15 +23,13 @@ namespace pcapng_pp {
 
             bool is_opened() const;
             void open();
+            Packet read_next_packet();
 
         private:
-            std::unique_ptr<PcapngBlock> read_next_record();
-            void parse_block(PcapngBlock *block, const std::vector<char>& data);
-            void parse_section_header_block(PcapngBlock *block, const std::vector<char>& data);
-            void parse_interface_block(PcapngBlock *block, const std::vector<char>& data);
-            void parse_simple_packet_block(PcapngBlock *block, const std::vector<char>& data);
-            void parse_enchanced_packet_block(PcapngBlock *block, const std::vector<char>& data);
-            void parse_custom_data_block(PcapngBlock *block, const std::vector<char>& data);
+            // utility function, reads specified amount of data, if data is not enough throws PcapngError
+            std::vector<char> read_from_stream(size_t len);
+            std::unique_ptr<PcapngBlock> read_next_block();
+            std::unique_ptr<PcapngBlock> parse_block(uint32_t block_type, std::vector<char>&& block_data);
             void fill_file_info(PcapngBlock *block_ptr);
 
         private:

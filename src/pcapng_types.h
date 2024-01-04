@@ -3,9 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <vector>
-#include <list>
 #include <string>
-#include "pcapng_block_body.h"
 
 constexpr size_t max_supported_interface_blocks {32};
 
@@ -13,13 +11,6 @@ namespace pcapng_pp {
     struct PcapngOption {
         std::vector<char> data;
         uint16_t custom_option_code;
-    };
-
-    struct PcapngBlock {
-        std::list<PcapngOption> options;
-        std::unique_ptr<PcapngBlockBody> block_body;
-        uint32_t block_type;
-	    uint32_t block_total_length;
     };
 
     struct PcapngFileInfo {

@@ -23,13 +23,19 @@ add_library(
     src/pcapng_file_reader.cpp
     src/pcapng_error.h
     src/pcapng_error.cpp
-    src/pcapng_block_body.h
-    src/types.h
+    src/pcapng_block.h
+    src/pcapng_block.cpp
+    src/pcapng_types.h
+    src/pcapng_constants.h
 )
+
+# 'span' library contains tests which is not supported by ARM processors
+# so we just add additional include directory for this library
 
 target_include_directories(
     ${PROJECT_NAME} PUBLIC
     ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/3rdparty/span/include
 )
 
 if (${ENABLE_TESTS})
