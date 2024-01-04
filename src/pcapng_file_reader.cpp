@@ -65,6 +65,18 @@ namespace {
         return result;
     }
 
+    BlockHeader read_block_header_backwards(std::ifstream& stream) {
+        assert(stream.tellg() != 0);
+        stream.seekg(-static_cast<int64_t>(sizeof(uint32_t)), std::ios::cur);
+        uint32_t block_len;
+        stream.read(reinterpret_cast<char*>(&block_len), sizeof(block_len));
+        if ((block_len % sizeof(uint32_t)) != 0 || stream.tellg() < block_len) {
+            throw PcapngError {ErrorCode::wrong_format_or_damaged};
+        }
+        stream.seekg(-static_cast<int64_t>(block_len), std::ios::cur);
+        return read_block_header(stream);
+    }
+
     bool is_packet_block_type(uint32_t t) {
         return t == simple_packet_block || t == enchanced_packet_block;
     }
@@ -153,7 +165,7 @@ size_t PcapngFileReader::get_total_packet_count() {
         if (is_packet_block_type(block_header.type)) {
             ++result;
         }
-        file_stream_.ignore(block_header.length - sizeof(BlockHeader));
+        file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
     }
     return result;
 }
@@ -162,8 +174,33 @@ uint64_t PcapngFileReader::seek_packet(int64_t offset) {
     if (!is_opened()) {
         throw PcapngError {ErrorCode::file_not_opened};
     }
-    // TODO:
-    return 0;
+    uint64_t result {0};
+    while (offset != 0) {
+        assert((file_stream_.tellg() % sizeof(uint32_t)) == 0);
+        if (offset > 0) {
+            if (file_stream_.peek() == EOF) {
+                return result;
+            }
+            auto block_header {read_block_header(file_stream_)};
+            if (is_packet_block_type(block_header.type)) {
+                --offset;
+                ++result;
+            } else if (block_header.type == interface_block) {
+                // TODO: deal with interface blocks only if we are moving forward
+            }
+            file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
+        } else if (offset < 0) {
+            if (file_stream_.tellg() == 0) {
+                return result;
+            }
+            auto block_header {read_block_header(file_stream_)};
+            if (is_packet_block_type(block_header.type)) {
+                ++offset;
+                ++result;
+            }
+        }
+    }
+    return result;
 }
 
 std::optional<Packet> PcapngFileReader::read_packet() {
