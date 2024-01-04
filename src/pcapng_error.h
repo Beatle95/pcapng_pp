@@ -8,7 +8,8 @@ namespace pcapng_pp {
         unable_to_open,
         wrong_format_or_damaged,
         size_mismatch,
-        unknown_block_type
+        unknown_block_type,
+        file_not_opened
     };
 
     class PcapngError : public std::exception {

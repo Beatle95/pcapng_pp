@@ -11,14 +11,62 @@ using namespace pcapng_pp::constants;
 constexpr size_t block_base_len {sizeof(uint32_t) * 3};
 constexpr size_t blocks_alignment {4};
 
+struct BlockHeader {
+    uint32_t type;
+    uint32_t length;
+};
+
+class FileStreamCursorSaver {
+    public:
+        FileStreamCursorSaver(std::ifstream& s) 
+            : file_stream_ {s},
+            saved_position_ {file_stream_.tellg()}
+        {
+        }
+
+        ~FileStreamCursorSaver() {
+            file_stream_.seekg(saved_position_, std::ios::beg);
+        }
+
+    private:
+        std::ifstream& file_stream_;
+        std::streampos saved_position_;
+};
+
 namespace {
     template<typename T>
-    T read_value_from_stream(std::fstream& stream) {
+    T read_value_from_stream(std::ifstream& stream) {
         T result;
         stream.read(reinterpret_cast<char*>(&result), sizeof(result));
         if (stream.gcount() != sizeof(result))
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
         return result;
+    }
+
+    // utility function, reads specified amount of data, if data is not enough throws PcapngError
+    std::vector<char> read_from_stream(size_t len, std::ifstream& stream) {
+        std::vector<char> result(len);
+        stream.read(result.data(), len);
+        if (stream.gcount() != len) {
+            throw PcapngError {ErrorCode::wrong_format_or_damaged};
+        }
+        return result;
+    }
+
+    BlockHeader read_block_header(std::ifstream& stream) {
+        static_assert(sizeof(BlockHeader) == 2 * sizeof(uint32_t));
+        BlockHeader result;
+        result.type = read_value_from_stream<uint32_t>(stream);
+        result.length = read_value_from_stream<uint32_t>(stream);
+        // length of block must be on a 32 bit boundary
+        if ((result.length % blocks_alignment) != 0 || result.length < block_base_len) {
+            throw PcapngError {ErrorCode::wrong_format_or_damaged};
+        }
+        return result;
+    }
+
+    bool is_packet_block_type(uint32_t t) {
+        return t == simple_packet_block || t == enchanced_packet_block;
     }
 }
 
@@ -37,7 +85,7 @@ const PcapngFileInfo& PcapngFileReader::get_file_info() const {
 }
 
 bool PcapngFileReader::is_opened() const {
-    return is_opened_;
+    return file_stream_.is_open();
 }
 
 // Section header block:
@@ -63,7 +111,7 @@ bool PcapngFileReader::is_opened() const {
 //    |                      Block Total Length                       |
 //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 void PcapngFileReader::open() {
-    if (is_opened_) {
+    if (is_opened()) {
         return;
     }
 
@@ -71,6 +119,7 @@ void PcapngFileReader::open() {
     if (!file_stream_.good()) {
         throw PcapngError {ErrorCode::unable_to_open};
     }
+
     // TODO: take to a consideration magic number and endianness
     // TODO: add support for compressed files
 
@@ -82,21 +131,47 @@ void PcapngFileReader::open() {
     }
     fill_file_info(block_ptr.get());
     // TODO: we may want to implement fast interfaces loading here
-    is_opened_ = true;
 }
 
-Packet PcapngFileReader::read_next_packet() {
-    // TODO:
-    return Packet {};
+void PcapngFileReader::close() {
+    if (!is_opened()) {
+        return;
+    }
+    file_stream_.close();
+    file_info_ = PcapngFileInfo {};
 }
 
-std::vector<char> PcapngFileReader::read_from_stream(size_t len) {
-    std::vector<char> result(len);
-    file_stream_.read(result.data(), len);
-    if (file_stream_.gcount() != len) {
-        throw PcapngError {ErrorCode::wrong_format_or_damaged};
+size_t PcapngFileReader::get_total_packet_count() {
+    if (!is_opened()) {
+        throw PcapngError {ErrorCode::file_not_opened};
+    }
+    size_t result {0};
+    FileStreamCursorSaver position_saver {file_stream_};
+    file_stream_.seekg(0, std::ios::beg);
+    while (file_stream_.peek() != EOF) {
+        auto block_header {read_block_header(file_stream_)};
+        if (is_packet_block_type(block_header.type)) {
+            ++result;
+        }
+        file_stream_.ignore(block_header.length - sizeof(BlockHeader));
     }
     return result;
+}
+
+uint64_t PcapngFileReader::seek_packet(int64_t offset) {
+    if (!is_opened()) {
+        throw PcapngError {ErrorCode::file_not_opened};
+    }
+    // TODO:
+    return 0;
+}
+
+std::optional<Packet> PcapngFileReader::read_packet() {
+    if (!is_opened()) {
+        throw PcapngError {ErrorCode::file_not_opened};
+    }
+    // TODO:
+    return {};
 }
 
 std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_block() {
@@ -112,19 +187,12 @@ std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_block() {
     //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     //    |                      Block Total Length                       |
     //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    const auto type {read_value_from_stream<uint32_t>(file_stream_)};
-    if (!type) {
-        throw PcapngError {ErrorCode::wrong_format_or_damaged};
-    }
-    const auto len {read_value_from_stream<uint32_t>(file_stream_)};
-    // len of block must be on a 32 bit boundary
-    if ((len % blocks_alignment) != 0 || len < block_base_len) {
-        throw PcapngError {ErrorCode::wrong_format_or_damaged};
-    }
-    auto block_ptr {parse_block(type, read_from_stream(len - block_base_len))};
+    auto block_header {read_block_header(file_stream_)};
+    assert((block_header.length % blocks_alignment) == 0 && block_header.length >= block_base_len);
+    auto block_ptr {parse_block(block_header.type, read_from_stream(block_header.length - block_base_len, file_stream_))};
     // read footer
     const auto footer_len {read_value_from_stream<uint32_t>(file_stream_)};
-    if (footer_len != len) {
+    if (footer_len != block_header.length) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
     return block_ptr;

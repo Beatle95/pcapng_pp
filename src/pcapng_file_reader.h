@@ -5,12 +5,13 @@
 #include <utility>
 #include <list>
 #include <vector>
+#include <optional>
 #include "pcapng_block.h"
 #include "packet.h"
 
 namespace pcapng_pp {
     /*
-        Class for reading .pcapng files. In case of an errors throws exceptions
+        Class for reading .pcapng files. In case of an errors throws PcapngError.
     */
     class PcapngFileReader {
         public:
@@ -18,25 +19,31 @@ namespace pcapng_pp {
             explicit PcapngFileReader(const std::filesystem::path& p);
 
             std::filesystem::path get_path() const;
-            // must not have beed called on closed object
             const PcapngFileInfo& get_file_info() const;
-
             bool is_opened() const;
+
             void open();
-            Packet read_next_packet();
+            void close();
+            // returns the amount of packets inside file (this function will have to go through all file and may be slow on large files)
+            // this function does not parses all packets, options, interfaces, etc; so it is possible that file is damaged, but we still
+            // may count total amount of packets
+            size_t get_total_packet_count();
+            // moves internal file position indicator (forward [if offset is positive])/(backward [if offset if negative])
+            // on the specified by offset amount of readable packets, returns actual number of packets that was skipped
+            uint64_t seek_packet(int64_t offset);
+            // reads next packet, if returned object is empty, then EOF was reached
+            // in case of any error throws PcapngError
+            std::optional<Packet> read_packet();
 
         private:
-            // utility function, reads specified amount of data, if data is not enough throws PcapngError
-            std::vector<char> read_from_stream(size_t len);
             std::unique_ptr<PcapngBlock> read_next_block();
             std::unique_ptr<PcapngBlock> parse_block(uint32_t block_type, std::vector<char>&& block_data);
             void fill_file_info(PcapngBlock *block_ptr);
 
         private:
             const std::filesystem::path file_path_;
-            std::fstream file_stream_;
+            std::ifstream file_stream_;
             PcapngFileInfo file_info_ {};
-            bool is_opened_ {false};
     };
 }
 #endif // __PCAPNGFILE_H__
