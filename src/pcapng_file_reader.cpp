@@ -78,26 +78,26 @@ namespace {
     }
 }
 
-PcapngFileReader::PcapngFileReader(const std::filesystem::path& p)
+FileReader::FileReader(const std::filesystem::path& p)
     : file_path_ {std::filesystem::weakly_canonical(p)}
 {
     interfaces_.reserve(interfaces_preallocation_size);
 }
     
-std::filesystem::path PcapngFileReader::get_path() const {
+std::filesystem::path FileReader::get_path() const {
     return file_path_;
 }
 
-const PcapngFileInfo& PcapngFileReader::get_file_info() const {
+const FileInfo& FileReader::get_file_info() const {
     assert(is_opened() && "Caling get_file_info() on closed file is not allowed");
     return file_info_;
 }
 
-bool PcapngFileReader::is_opened() const {
+bool FileReader::is_opened() const {
     return file_stream_.is_open();
 }
 
-void PcapngFileReader::open() {
+void FileReader::open() {
     if (is_opened()) {
         return;
     }
@@ -120,15 +120,15 @@ void PcapngFileReader::open() {
     // TODO: we may want to implement fast interfaces loading here
 }
 
-void PcapngFileReader::close() {
+void FileReader::close() {
     if (!is_opened()) {
         return;
     }
     file_stream_.close();
-    file_info_ = PcapngFileInfo {};
+    file_info_ = FileInfo {};
 }
 
-size_t PcapngFileReader::get_total_packet_count() {
+size_t FileReader::get_total_packet_count() {
     if (!is_opened()) {
         throw PcapngError {ErrorCode::file_not_opened};
     }
@@ -145,7 +145,7 @@ size_t PcapngFileReader::get_total_packet_count() {
     return result;
 }
 
-uint64_t PcapngFileReader::seek_packet(int64_t offset) {
+uint64_t FileReader::seek_packet(int64_t offset) {
     if (!is_opened()) {
         throw PcapngError {ErrorCode::file_not_opened};
     }
@@ -179,14 +179,14 @@ uint64_t PcapngFileReader::seek_packet(int64_t offset) {
     return result;
 }
 
-std::optional<Packet> PcapngFileReader::read_packet() {
+std::optional<Packet> FileReader::read_packet() {
     if (!is_opened()) {
         throw PcapngError {ErrorCode::file_not_opened};
     }
     while (file_stream_.peek() != EOF) {
         const auto block_header {read_block_header(file_stream_)};
         if (is_packet_block_type(block_header.type)) {
-            return dynamic_cast<PcapngSimplePacket*>(read_next_block(block_header).release());
+            return dynamic_cast<SimplePacketBlock*>(read_next_block(block_header).release());
         } else if (block_header.type == interface_block) {
             // deal with interface blocks only if we are moving forward
             process_next_interface_block(block_header);            
@@ -198,7 +198,7 @@ std::optional<Packet> PcapngFileReader::read_packet() {
     return {};
 }
 
-std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_block(const BlockHeader& block_header) {
+std::unique_ptr<AbstractPcapngBlock> FileReader::read_next_block(const BlockHeader& block_header) {
     //                         1                   2                   3
     //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -221,42 +221,42 @@ std::unique_ptr<PcapngBlock> PcapngFileReader::read_next_block(const BlockHeader
     return block_ptr;
 }
 
-std::unique_ptr<PcapngBlock> PcapngFileReader::parse_block(uint32_t block_type, std::vector<char>&& block_data) {
+std::unique_ptr<AbstractPcapngBlock> FileReader::parse_block(uint32_t block_type, std::vector<char>&& block_data) {
     switch (block_type) {
         case section_header_block:
-            return std::make_unique<PcapngSectionHeader>(block_data);
+            return std::make_unique<SectionHeaderBlock>(block_data);
 
         case interface_block:
-            return std::make_unique<PcapngInterfaceDescription>(block_data);
+            return std::make_unique<InterfaceDescriptionBlock>(block_data);
 
         case simple_packet_block:
-            return std::make_unique<PcapngSimplePacket>(std::move(block_data));
+            return std::make_unique<SimplePacketBlock>(std::move(block_data));
 
         case enchanced_packet_block:
-            return std::make_unique<PcapngEnchancedPacket>(std::move(block_data), interfaces_);
+            return std::make_unique<EnchancedPacketBlock>(std::move(block_data), interfaces_);
 
         case custom_data_block:
-            return std::make_unique<PcapngCustomNonstandardBlock>(std::move(block_data));
+            return std::make_unique<CustomNonstandardBlock>(std::move(block_data));
         
         default:
             throw PcapngError {ErrorCode::unknown_block_type};
     }
 }
 
-void PcapngFileReader::process_next_interface_block(const BlockHeader& block_header) {
+void FileReader::process_next_interface_block(const BlockHeader& block_header) {
     if (last_interface_offset_ >= file_stream_.tellg() - static_cast<std::streampos>(sizeof(BlockHeader))) {
         file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
         return;
     }
-    auto&& new_elem {interfaces_.emplace_back(dynamic_cast<PcapngInterfaceDescription*>(read_next_block(block_header).release()))};
+    auto&& new_elem {interfaces_.emplace_back(dynamic_cast<InterfaceDescriptionBlock*>(read_next_block(block_header).release()))};
     assert(bool(new_elem));
     last_interface_offset_ = file_stream_.tellg() - static_cast<std::streampos>(block_header.length);
     assert(last_interface_offset_ >= 0 && last_interface_offset_ % 4 == 0);
 }
 
-void PcapngFileReader::fill_file_info(PcapngBlock *block_ptr) {
+void FileReader::fill_file_info(AbstractPcapngBlock *block_ptr) {
     assert(block_ptr != nullptr);
-    auto section_header {dynamic_cast<PcapngSectionHeader*>(block_ptr)};
+    auto section_header {dynamic_cast<SectionHeaderBlock*>(block_ptr)};
     if (section_header == nullptr) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }

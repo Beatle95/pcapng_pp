@@ -11,12 +11,12 @@ namespace pcapng_pp {
         uint32_t length;
     };
 
-    struct PcapngOption {
+    struct BlockOption {
         std::vector<char> data;
         uint16_t custom_option_code;
     };
 
-    struct PcapngFileInfo {
+    struct FileInfo {
         std::string file_comment;
         std::string hardware_desc;
         std::string os_desc;

@@ -18,22 +18,22 @@ namespace {
     }
 } // namespace
 
-// PcapngBlock
+// AbstractPcapngBlock
     
-PcapngBlockType PcapngBlock::get_type() const {
+PcapngBlockType AbstractPcapngBlock::get_type() const {
     return type_;
 }
 
-const std::list<PcapngOption>& PcapngBlock::get_options() const {
+const std::list<BlockOption>& AbstractPcapngBlock::get_options() const {
     return options_;
 }
 
-PcapngBlock::PcapngBlock(PcapngBlockType t) 
+AbstractPcapngBlock::AbstractPcapngBlock(PcapngBlockType t) 
     : type_ {t}
 {    
 }
     
-void PcapngBlock::parse_options(Span<const char> data) {
+void AbstractPcapngBlock::parse_options(Span<const char> data) {
     // Options structure.
     //                      1                   2                   3
     //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -55,7 +55,7 @@ void PcapngBlock::parse_options(Span<const char> data) {
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
         }
 
-        PcapngOption new_opt {};
+        BlockOption new_opt {};
         new_opt.custom_option_code = *reinterpret_cast<const uint16_t*>(&data[offset]);
         offset += sizeof(uint16_t);
         const auto len {*reinterpret_cast<const uint16_t*>(&data[offset])};
@@ -76,10 +76,10 @@ void PcapngBlock::parse_options(Span<const char> data) {
     }
 }
 
-// PcapngSectionHeader
+// SectionHeaderBlock
 
-PcapngSectionHeader::PcapngSectionHeader(Span<const char> data)
-    : PcapngBlock {PcapngBlockType::section_header}
+SectionHeaderBlock::SectionHeaderBlock(Span<const char> data)
+    : AbstractPcapngBlock {PcapngBlockType::section_header}
 {
     // Section header block:
     //                         1                   2                   3
@@ -116,14 +116,14 @@ PcapngSectionHeader::PcapngSectionHeader(Span<const char> data)
     }
 }
     
-PcapngSectionHeader::Version PcapngSectionHeader::get_version() const {
+SectionHeaderBlock::Version SectionHeaderBlock::get_version() const {
     return version_;
 }
 
-// PcapngInterfaceDescription
+// InterfaceDescriptionBlock
 
-PcapngInterfaceDescription::PcapngInterfaceDescription(Span<const char> data)
-    : PcapngBlock {PcapngBlockType::interface_description}
+InterfaceDescriptionBlock::InterfaceDescriptionBlock(Span<const char> data)
+    : AbstractPcapngBlock {PcapngBlockType::interface_description}
 {
     //                         1                   2                   3
     //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -154,10 +154,10 @@ PcapngInterfaceDescription::PcapngInterfaceDescription(Span<const char> data)
     }
 }
 
-// PcapngSimplePacket
+// SimplePacketBlock
 
-PcapngSimplePacket::PcapngSimplePacket(std::vector<char>&& data)
-    : PcapngBlock {PcapngBlockType::simple_packet},
+SimplePacketBlock::SimplePacketBlock(std::vector<char>&& data)
+    : AbstractPcapngBlock {PcapngBlockType::simple_packet},
     block_data_ {std::move(data)},
     packet_data_span_ {block_data_}
 {
@@ -188,35 +188,35 @@ PcapngSimplePacket::PcapngSimplePacket(std::vector<char>&& data)
     // this block doesn't have options
 }
 
-Span<const char> PcapngSimplePacket::get_packet_data() const {
+Span<const char> SimplePacketBlock::get_packet_data() const {
     return packet_data_span_;
 }
 
-size_t PcapngSimplePacket::get_captured_length() const {
+size_t SimplePacketBlock::get_captured_length() const {
     return packet_data_span_.size();
 }
 
-size_t PcapngSimplePacket::get_original_length() const {
+size_t SimplePacketBlock::get_original_length() const {
     return 0;
 }
 
-InterfaceDescConstPtr PcapngSimplePacket::get_interface() const {
+InterfaceDescConstPtr SimplePacketBlock::get_interface() const {
     return {};
 }
 
-uint64_t PcapngSimplePacket::get_timestamp() const {
+uint64_t SimplePacketBlock::get_timestamp() const {
     return 0;
 }
 
-PcapngSimplePacket::PcapngSimplePacket(PcapngBlockType t) 
-    : PcapngBlock {t}
+SimplePacketBlock::SimplePacketBlock(PcapngBlockType t) 
+    : AbstractPcapngBlock {t}
 {    
 }
 
-// PcapngEnchancedPacket
+// EnchancedPacketBlock
 
-PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces) 
-    : PcapngSimplePacket {PcapngBlockType::enchanced_packet}
+EnchancedPacketBlock::EnchancedPacketBlock(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces) 
+    : SimplePacketBlock {PcapngBlockType::enchanced_packet}
 {
     //                         1                   2                   3
     //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -270,22 +270,22 @@ PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data, Span<Inte
     }
 }
 
-size_t PcapngEnchancedPacket::get_original_length() const {
+size_t EnchancedPacketBlock::get_original_length() const {
     return original_capture_length_;
 }
 
-InterfaceDescConstPtr PcapngEnchancedPacket::get_interface() const {
+InterfaceDescConstPtr EnchancedPacketBlock::get_interface() const {
     return interface_;
 }
 
-uint64_t PcapngEnchancedPacket::get_timestamp() const {
+uint64_t EnchancedPacketBlock::get_timestamp() const {
     return (static_cast<uint64_t>(timestamp_high_) << 32) | timestamp_low_;
 }
 
-// PcapngCustomNonstandardBlock
+// CustomNonstandardBlock
 
-PcapngCustomNonstandardBlock::PcapngCustomNonstandardBlock(std::vector<char> &&data) 
-    : PcapngSimplePacket {PcapngBlockType::custom_block}
+CustomNonstandardBlock::CustomNonstandardBlock(std::vector<char> &&data) 
+    : SimplePacketBlock {PcapngBlockType::custom_block}
 {
     //                         1                   2                   3
     //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

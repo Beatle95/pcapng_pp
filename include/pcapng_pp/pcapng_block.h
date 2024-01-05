@@ -13,16 +13,16 @@
     Class hierarchy:
                  _________________PcapngBlock_________________
                 /                      |                      \
-    PcapngSectionHeader    PcapngInterfaceDescription    PcapngSimplePacket
+    SectionHeaderBlock    InterfaceDescriptionBlock    SimplePacketBlock
                                                             /          \
-                                          PcapngEnchancedPacket    PcapngCustomNonstandardBlock
+                                          EnchancedPacketBlock    CustomNonstandardBlock
 */
 namespace pcapng_pp {
-    class PcapngInterfaceDescription;
+    class InterfaceDescriptionBlock;
     // we are targeting compilers with no c++20 support, so use non-standard span implementation
     template<typename T> using Span = tcb::span<T>;
-    using InterfaceDescPtr = std::shared_ptr<PcapngInterfaceDescription>;
-    using InterfaceDescConstPtr = std::shared_ptr<const PcapngInterfaceDescription>;
+    using InterfaceDescPtr = std::shared_ptr<InterfaceDescriptionBlock>;
+    using InterfaceDescConstPtr = std::shared_ptr<const InterfaceDescriptionBlock>;
 
     enum class PcapngBlockType {
         section_header,
@@ -32,25 +32,25 @@ namespace pcapng_pp {
         custom_block
     };
 
-    class PcapngBlock {
+    class AbstractPcapngBlock {
         public:
-            PcapngBlock() = delete;
-            virtual ~PcapngBlock() noexcept = default;
+            AbstractPcapngBlock() = delete;
+            virtual ~AbstractPcapngBlock() noexcept = default;
 
             PcapngBlockType get_type() const;
-            const std::list<PcapngOption>& get_options() const;
+            const std::list<BlockOption>& get_options() const;
 
         protected:
-            explicit PcapngBlock(PcapngBlockType t);
+            explicit AbstractPcapngBlock(PcapngBlockType t);
             void parse_options(Span<const char> data);
 
         private:
-            std::list<PcapngOption> options_;
+            std::list<BlockOption> options_;
             const PcapngBlockType type_;
     };
 
 
-    class PcapngSectionHeader final : public PcapngBlock {
+    class SectionHeaderBlock final : public AbstractPcapngBlock {
         public:
             struct Version {
                 uint16_t major;
@@ -58,7 +58,7 @@ namespace pcapng_pp {
             };
 
         public:
-            explicit PcapngSectionHeader(Span<const char> data);
+            explicit SectionHeaderBlock(Span<const char> data);
             Version get_version() const;
 
         private:
@@ -68,9 +68,9 @@ namespace pcapng_pp {
     };
 
 
-    class PcapngInterfaceDescription final : public PcapngBlock {
+    class InterfaceDescriptionBlock final : public AbstractPcapngBlock {
         public:
-            explicit PcapngInterfaceDescription(Span<const char> data);
+            explicit InterfaceDescriptionBlock(Span<const char> data);
 
         private:
             uint32_t snapshot_length_;
@@ -79,9 +79,9 @@ namespace pcapng_pp {
     };
 
 
-    class PcapngSimplePacket : public PcapngBlock {
+    class SimplePacketBlock : public AbstractPcapngBlock {
         public:
-            explicit PcapngSimplePacket(std::vector<char>&& data);
+            explicit SimplePacketBlock(std::vector<char>&& data);
             Span<const char> get_packet_data() const;
             size_t get_captured_length() const;
             virtual size_t get_original_length() const;
@@ -89,7 +89,7 @@ namespace pcapng_pp {
             virtual uint64_t get_timestamp() const;
 
         protected:
-            PcapngSimplePacket(PcapngBlockType t);
+            SimplePacketBlock(PcapngBlockType t);
 
         protected:
             // in most of the situation we don't want to reallocate memory for exact packet data
@@ -100,9 +100,9 @@ namespace pcapng_pp {
     };
 
 
-    class PcapngEnchancedPacket final : public PcapngSimplePacket {
+    class EnchancedPacketBlock final : public SimplePacketBlock {
         public:
-            explicit PcapngEnchancedPacket(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces);
+            explicit EnchancedPacketBlock(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces);
             size_t get_original_length() const final;
             InterfaceDescConstPtr get_interface() const final;
             uint64_t get_timestamp() const final;
@@ -115,9 +115,9 @@ namespace pcapng_pp {
     };
 
 
-    class PcapngCustomNonstandardBlock final : public PcapngSimplePacket {
+    class CustomNonstandardBlock final : public SimplePacketBlock {
         public:
-            explicit PcapngCustomNonstandardBlock(std::vector<char>&& data);
+            explicit CustomNonstandardBlock(std::vector<char>&& data);
 
         private:
             uint32_t reserved0_;

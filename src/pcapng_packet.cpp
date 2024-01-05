@@ -3,13 +3,13 @@
 
 using namespace pcapng_pp;
     
-Packet::Packet(PcapngSimplePacket *packet_block)
+Packet::Packet(SimplePacketBlock *packet_block)
     : packet_block_ {packet_block}
 {
     assert(bool(packet_block_));
 }
 
-Packet::Packet(std::unique_ptr<PcapngSimplePacket>&& packet_block)
+Packet::Packet(std::unique_ptr<SimplePacketBlock>&& packet_block)
     : packet_block_ {std::move(packet_block)}
 {
     assert(bool(packet_block_));
