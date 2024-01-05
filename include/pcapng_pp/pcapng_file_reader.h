@@ -5,7 +5,7 @@
 #include <vector>
 #include <optional>
 #include "pcapng_block.h"
-#include "packet.h"
+#include "pcapng_packet.h"
 
 namespace pcapng_pp {
     /*

@@ -1,4 +1,4 @@
-#include "pcapng_pp/packet.h"
+#include "pcapng_pp/pcapng_packet.h"
 #include <assert.h>
 
 using namespace pcapng_pp;

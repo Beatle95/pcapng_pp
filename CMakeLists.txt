@@ -20,12 +20,12 @@ add_library(
     include/pcapng_pp/pcapng_file_reader.h
     include/pcapng_pp/pcapng_error.h
     include/pcapng_pp/pcapng_block.h
-    include/pcapng_pp/packet.h
+    include/pcapng_pp/pcapng_packet.h
 
     src/pcapng_file_reader.cpp
     src/pcapng_error.cpp
     src/pcapng_block.cpp
-    src/packet.cpp
+    src/pcapng_packet.cpp
 )
 
 # 'span' library contains tests which is not supported by ARM processors
