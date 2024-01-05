@@ -18,8 +18,11 @@
                                           PcapngEnchancedPacket    PcapngCustomNonstandardBlock
 */
 namespace pcapng_pp {
+    class PcapngInterfaceDescription;
     // we are targeting compilers with no c++20 support, so use non-standard span implementation
     template<typename T> using Span = tcb::span<T>;
+    using InterfaceDescPtr = std::shared_ptr<PcapngInterfaceDescription>;
+    using InterfaceDescConstPtr = std::shared_ptr<const PcapngInterfaceDescription>;
 
     enum class PcapngBlockType {
         section_header,
@@ -80,6 +83,10 @@ namespace pcapng_pp {
         public:
             explicit PcapngSimplePacket(std::vector<char>&& data);
             Span<const char> get_packet_data() const;
+            size_t get_captured_length() const;
+            virtual size_t get_original_length() const;
+            virtual InterfaceDescConstPtr get_interface() const;
+            virtual uint64_t get_timestamp() const;
 
         protected:
             PcapngSimplePacket(PcapngBlockType t);
@@ -95,13 +102,13 @@ namespace pcapng_pp {
 
     class PcapngEnchancedPacket final : public PcapngSimplePacket {
         public:
-            using InterfaceDescPtr = std::shared_ptr<PcapngInterfaceDescription>;
-
-        public:
             explicit PcapngEnchancedPacket(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces);
+            size_t get_original_length() const final;
+            InterfaceDescConstPtr get_interface() const final;
+            uint64_t get_timestamp() const final;
 
         private:
-            InterfaceDescPtr interface_;
+            InterfaceDescConstPtr interface_;
             uint32_t timestamp_high_;
             uint32_t timestamp_low_;
             uint32_t original_capture_length_;

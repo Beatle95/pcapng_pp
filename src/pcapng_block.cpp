@@ -192,6 +192,22 @@ Span<const char> PcapngSimplePacket::get_packet_data() const {
     return packet_data_span_;
 }
 
+size_t PcapngSimplePacket::get_captured_length() const {
+    return packet_data_span_.size();
+}
+
+size_t PcapngSimplePacket::get_original_length() const {
+    return 0;
+}
+
+InterfaceDescConstPtr PcapngSimplePacket::get_interface() const {
+    return {};
+}
+
+uint64_t PcapngSimplePacket::get_timestamp() const {
+    return 0;
+}
+
 PcapngSimplePacket::PcapngSimplePacket(PcapngBlockType t) 
     : PcapngBlock {t}
 {    
@@ -252,6 +268,18 @@ PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data, Span<Inte
     if (ptr < end_ptr) {
         parse_options(Span<const char> {ptr, end_ptr});
     }
+}
+
+size_t PcapngEnchancedPacket::get_original_length() const {
+    return original_capture_length_;
+}
+
+InterfaceDescConstPtr PcapngEnchancedPacket::get_interface() const {
+    return interface_;
+}
+
+uint64_t PcapngEnchancedPacket::get_timestamp() const {
+    return (static_cast<uint64_t>(timestamp_high_) << 32) | timestamp_low_;
 }
 
 // PcapngCustomNonstandardBlock

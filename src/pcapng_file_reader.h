@@ -2,8 +2,6 @@
 #define __PCAPNGFILE_H__
 #include <filesystem>
 #include <fstream>
-#include <utility>
-#include <list>
 #include <vector>
 #include <optional>
 #include "pcapng_block.h"
