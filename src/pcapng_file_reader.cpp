@@ -164,7 +164,7 @@ uint64_t FileReader::seek_packet(int64_t offset) {
                 ++result;
             } else if (block_header.type == interface_block) {
                 // deal with interface blocks only if we are moving forward
-                process_next_interface_block(block_header);
+                read_next_interface_block(block_header);
             }
             file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
         } else if (offset < 0) {
@@ -191,7 +191,7 @@ std::optional<Packet> FileReader::read_packet() {
             return dynamic_cast<SimplePacketBlock*>(read_next_block(block_header).release());
         } else if (block_header.type == interface_block) {
             // deal with interface blocks only if we are moving forward
-            process_next_interface_block(block_header);            
+            read_next_interface_block(block_header);            
         } else {
             // this is some unknown block, for now just skip it
             file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
@@ -245,7 +245,7 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::parse_block(uint32_t block_type
     }
 }
 
-void FileReader::process_next_interface_block(const BlockHeader& block_header) {
+void FileReader::read_next_interface_block(const BlockHeader& block_header) {
     if (last_interface_offset_ >= file_stream_.tellg() - static_cast<std::streampos>(sizeof(BlockHeader))) {
         file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
         return;

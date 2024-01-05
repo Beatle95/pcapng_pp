@@ -37,7 +37,7 @@ namespace pcapng_pp {
             std::unique_ptr<AbstractPcapngBlock> read_next_block(const BlockHeader& block_header);
             std::unique_ptr<AbstractPcapngBlock> parse_block(uint32_t block_type, std::vector<char>&& block_data);
             // this function reads next interface block and possibly places it inside interfaces_ storage
-            void process_next_interface_block(const BlockHeader& block_header);
+            void read_next_interface_block(const BlockHeader& block_header);
             void fill_file_info(AbstractPcapngBlock *block_ptr);
 
         private:
