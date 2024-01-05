@@ -1,4 +1,4 @@
-#include "pcapng_error.h"
+#include "pcapng_pp/pcapng_error.h"
 
 using namespace pcapng_pp;
 

@@ -15,16 +15,17 @@ set(CMAKE_CXX_EXTENSIONS       OFF)
 
 add_library(
     ${PROJECT_NAME} STATIC
-    src/pcapng_file_reader.h
+    include/pcapng_pp/pcapng_types.h
+    include/pcapng_pp/pcapng_constants.h
+    include/pcapng_pp/pcapng_file_reader.h
+    include/pcapng_pp/pcapng_error.h
+    include/pcapng_pp/pcapng_block.h
+    include/pcapng_pp/packet.h
+
     src/pcapng_file_reader.cpp
-    src/pcapng_error.h
     src/pcapng_error.cpp
-    src/pcapng_block.h
     src/pcapng_block.cpp
-    src/packet.h
     src/packet.cpp
-    src/pcapng_types.h
-    src/pcapng_constants.h
 )
 
 # 'span' library contains tests which is not supported by ARM processors
@@ -32,7 +33,7 @@ add_library(
 
 target_include_directories(
     ${PROJECT_NAME} PUBLIC
-    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/3rdparty/span/include
 )
 

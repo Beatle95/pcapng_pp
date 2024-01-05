@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include "path.h"
-#include "pcapng_file_reader.h"
+#include "pcapng_pp/pcapng_file_reader.h"
 
 using namespace pcapng_pp;
 
