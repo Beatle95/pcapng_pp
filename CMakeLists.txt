@@ -21,6 +21,8 @@ add_library(
     src/pcapng_error.cpp
     src/pcapng_block.h
     src/pcapng_block.cpp
+    src/packet.h
+    src/packet.cpp
     src/pcapng_types.h
     src/pcapng_constants.h
 )

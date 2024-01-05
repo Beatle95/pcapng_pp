@@ -199,7 +199,7 @@ PcapngSimplePacket::PcapngSimplePacket(PcapngBlockType t)
 
 // PcapngEnchancedPacket
 
-PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data) 
+PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces) 
     : PcapngSimplePacket {PcapngBlockType::enchanced_packet}
 {
     //                         1                   2                   3
@@ -234,15 +234,16 @@ PcapngEnchancedPacket::PcapngEnchancedPacket(std::vector<char>&& data)
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
     auto ptr {data.data()};
-    interface_id_ = *reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)));
+    const auto iface_id {*reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)))};
     timestamp_high_ = *reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)));
     timestamp_low_ = *reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)));
     const auto captured_len {*reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)))};
     original_capture_length_ = *reinterpret_cast<const uint32_t*>(std::exchange(ptr, ptr + sizeof(uint32_t)));
-    if (captured_len > data.size() - pcapng_enchanced_packet_len) {
+    if (iface_id >= interfaces.size() || captured_len > data.size() - pcapng_enchanced_packet_len) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
 
+    interface_ = interfaces[iface_id];
     block_data_ = std::move(data);
     packet_data_span_ = Span<const char> {ptr, captured_len};
     ptr += get_4_byte_aligned_len(captured_len);

@@ -183,7 +183,18 @@ std::optional<Packet> PcapngFileReader::read_packet() {
     if (!is_opened()) {
         throw PcapngError {ErrorCode::file_not_opened};
     }
-    // TODO:
+    while (file_stream_.peek() != EOF) {
+        const auto block_header {read_block_header(file_stream_)};
+        if (is_packet_block_type(block_header.type)) {
+            return dynamic_cast<PcapngSimplePacket*>(read_next_block(block_header).release());
+        } else if (block_header.type == interface_block) {
+            // deal with interface blocks only if we are moving forward
+            process_next_interface_block(block_header);            
+        } else {
+            // this is some unknown block, for now just skip it
+            file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
+        }
+    }
     return {};
 }
 
@@ -222,7 +233,7 @@ std::unique_ptr<PcapngBlock> PcapngFileReader::parse_block(uint32_t block_type, 
             return std::make_unique<PcapngSimplePacket>(std::move(block_data));
 
         case enchanced_packet_block:
-            return std::make_unique<PcapngEnchancedPacket>(std::move(block_data));
+            return std::make_unique<PcapngEnchancedPacket>(std::move(block_data), interfaces_);
 
         case custom_data_block:
             return std::make_unique<PcapngCustomNonstandardBlock>(std::move(block_data));

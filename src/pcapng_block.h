@@ -2,6 +2,7 @@
 #define __PcapngBlock_H__
 #include <vector>
 #include <list>
+#include <memory>
 #include "tcb/span.hpp"
 #include "pcapng_types.h"
 
@@ -94,10 +95,13 @@ namespace pcapng_pp {
 
     class PcapngEnchancedPacket final : public PcapngSimplePacket {
         public:
-            explicit PcapngEnchancedPacket(std::vector<char>&& data);
+            using InterfaceDescPtr = std::shared_ptr<PcapngInterfaceDescription>;
+
+        public:
+            explicit PcapngEnchancedPacket(std::vector<char>&& data, Span<InterfaceDescPtr> interfaces);
 
         private:
-            uint32_t interface_id_;
+            InterfaceDescPtr interface_;
             uint32_t timestamp_high_;
             uint32_t timestamp_low_;
             uint32_t original_capture_length_;

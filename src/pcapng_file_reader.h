@@ -44,7 +44,7 @@ namespace pcapng_pp {
 
         private:
             const std::filesystem::path file_path_;
-            std::vector<std::unique_ptr<PcapngInterfaceDescription>> interfaces_;
+            std::vector<std::shared_ptr<PcapngInterfaceDescription>> interfaces_;
             std::ifstream file_stream_;
             std::streampos last_interface_offset_ {0};
             PcapngFileInfo file_info_ {};
