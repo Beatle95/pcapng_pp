@@ -89,7 +89,9 @@ std::filesystem::path FileReader::get_path() const {
 }
 
 const FileInfo& FileReader::get_file_info() const {
-    assert(is_opened() && "Caling get_file_info() on closed file is not allowed");
+    if (!is_opened()) {
+        throw PcapngError {ErrorCode::file_not_opened};
+    }
     return file_info_;
 }
 
