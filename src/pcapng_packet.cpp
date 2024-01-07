@@ -18,3 +18,7 @@ Packet::Packet(std::unique_ptr<SimplePacketBlock>&& packet_block)
 Span<const char> Packet::get_packet_data() const {
     return packet_block_->get_packet_data();
 }
+
+Interface Packet::get_interface() const {
+    return Interface {packet_block_->get_interface()};
+}

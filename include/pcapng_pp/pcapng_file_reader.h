@@ -9,7 +9,7 @@
 
 namespace pcapng_pp {
     /*
-        Class for reading .pcapng files. In case of an errors throws PcapngError.
+        Class for reading .pcapng files. In case of an errors public functions throws PcapngError.
     */
     class FileReader {
         public:
@@ -35,13 +35,20 @@ namespace pcapng_pp {
 
         private:
             std::unique_ptr<AbstractPcapngBlock> read_next_block(const BlockHeader& block_header);
-            std::unique_ptr<AbstractPcapngBlock> parse_block(uint32_t block_type, std::vector<char>&& block_data);
+            std::unique_ptr<AbstractPcapngBlock> read_correct_block(const BlockHeader& block_header);
+            std::unique_ptr<AbstractPcapngBlock> read_section_block(size_t size);
+            std::unique_ptr<AbstractPcapngBlock> read_interface_block(size_t size);
+            std::unique_ptr<AbstractPcapngBlock> read_simple_packet_block(size_t size);
+            std::unique_ptr<AbstractPcapngBlock> read_enchanced_packet_block(size_t size);
+            std::unique_ptr<AbstractPcapngBlock> read_custom_nonstandard_block(size_t size);
+            void read_block_options(size_t bytes_to_block_end, AbstractPcapngBlock& block);
             // this function reads next interface block and possibly places it inside interfaces_ storage
             void read_next_interface_block(const BlockHeader& block_header);
             void fill_file_info(AbstractPcapngBlock *block_ptr);
 
         private:
             const std::filesystem::path file_path_;
+            // TODO: must be in section header block
             std::vector<std::shared_ptr<InterfaceDescriptionBlock>> interfaces_;
             std::ifstream file_stream_;
             std::streampos last_interface_offset_ {0};
