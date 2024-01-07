@@ -140,7 +140,9 @@ void FileReader::close() {
         return;
     }
     file_stream_.close();
+    interfaces_.clear();
     file_info_ = FileInfo {};
+    last_interface_offset_ = 0;
 }
 
 size_t FileReader::get_total_packet_count() {
