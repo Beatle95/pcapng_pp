@@ -36,7 +36,7 @@ namespace pcapng_pp {
 
             PcapngBlockType get_type() const;
             bool is_option_exists(uint16_t option_code) const;
-            Span<const char> get_option_data(uint16_t option_code) const;
+            Span<const uint8_t> get_option_data(uint16_t option_code) const;
 
             void add_option(const BlockOption& opt);
             void add_option(BlockOption&& opt);
@@ -71,6 +71,8 @@ namespace pcapng_pp {
     class InterfaceDescriptionBlock final : public AbstractPcapngBlock {
         public:
             InterfaceDescriptionBlock(uint16_t link, uint16_t reserved, uint32_t snap_len);
+            uint32_t get_snapshot_length() const;
+            uint16_t get_link_type() const;
 
         private:
             uint32_t snapshot_length_;
@@ -84,14 +86,14 @@ namespace pcapng_pp {
             SimplePacketBlock();
             
             InterfaceBlockPtr get_interface() const;
-            Span<const char> get_packet_data() const;
+            Span<const uint8_t> get_packet_data() const;
             size_t get_captured_length() const;
 
             virtual size_t get_original_length() const;
             virtual uint64_t get_timestamp() const;
 
-            void set_data(const std::vector<char>& data);
-            void set_data(std::vector<char>&& data);
+            void set_data(const std::vector<uint8_t>& data);
+            void set_data(std::vector<uint8_t>&& data);
             void set_interface(const InterfaceBlockPtr& iface);
 
         protected:
@@ -101,7 +103,7 @@ namespace pcapng_pp {
             // in most of the situation we don't want to reallocate memory for exact packet data
             // (without options and other data which may be presented in packet), so we are storing
             // total data in block_data_ and moving the packet_data_span_ to packet itself
-            std::vector<char> packet_data_;
+            std::vector<uint8_t> packet_data_;
             InterfaceBlockPtr interface_;
     };
 

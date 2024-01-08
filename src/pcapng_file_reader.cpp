@@ -72,9 +72,9 @@ namespace {
     }
 
     // utility function, reads specified amount of data, if data is not enough throws PcapngError
-    std::vector<char> read_from_stream(size_t len, std::ifstream& stream) {
-        std::vector<char> result(len);
-        stream.read(result.data(), len);
+    std::vector<uint8_t> read_from_stream(size_t len, std::ifstream& stream) {
+        std::vector<uint8_t> result(len);
+        stream.read(reinterpret_cast<char*>(result.data()), len);
         if (stream.gcount() != len) {
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
         }

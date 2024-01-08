@@ -15,7 +15,7 @@ namespace pcapng_pp {
     };
 
     struct BlockOption {
-        std::vector<char> data;
+        std::vector<uint8_t> data;
         uint16_t custom_option_code;
     };
 
