@@ -52,12 +52,6 @@ namespace pcapng_pp {
 
     class SectionHeaderBlock final : public AbstractPcapngBlock {
         public:
-            struct Version {
-                uint16_t major;
-                uint16_t minor;
-            };
-
-        public:
             SectionHeaderBlock(uint32_t magic, uint16_t ver_major, uint16_t ver_minor, uint64_t len);
             Version get_version() const;
 

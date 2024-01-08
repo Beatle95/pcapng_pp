@@ -8,6 +8,11 @@
 namespace pcapng_pp {
     // we are targeting compilers with no c++20 support, so use non-standard span implementation
     template<typename T> using Span = tcb::span<T>;
+    
+    struct Version {
+        uint16_t major;
+        uint16_t minor;
+    };
 
     struct BlockHeader {
         uint32_t type;

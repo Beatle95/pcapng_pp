@@ -34,7 +34,7 @@ namespace pcapng_pp {
             std::optional<Packet> read_packet();
 
         private:
-            std::unique_ptr<AbstractPcapngBlock> read_next_block(const BlockHeader& block_header);
+            std::unique_ptr<AbstractPcapngBlock> read_block(const BlockHeader& block_header);
             std::unique_ptr<AbstractPcapngBlock> read_correct_block(const BlockHeader& block_header);
             std::unique_ptr<AbstractPcapngBlock> read_section_block(size_t size);
             std::unique_ptr<AbstractPcapngBlock> read_interface_block(size_t size);

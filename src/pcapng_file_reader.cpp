@@ -126,7 +126,7 @@ void FileReader::open() {
     // TODO: add support for compressed files
 
     // read section header block
-    auto&& block_ptr {read_next_block(read_block_header(file_stream_))};
+    auto&& block_ptr {read_block(read_block_header(file_stream_))};
     assert(block_ptr);
     if (block_ptr->get_type() != PcapngBlockType::section_header) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -203,7 +203,7 @@ std::optional<Packet> FileReader::read_packet() {
     while (file_stream_.peek() != EOF) {
         const auto block_header {read_block_header(file_stream_)};
         if (is_packet_block_type(block_header.type)) {
-            return dynamic_cast<SimplePacketBlock*>(read_next_block(block_header).release());
+            return dynamic_cast<SimplePacketBlock*>(read_block(block_header).release());
         } else if (block_header.type == interface_block) {
             // deal with interface blocks only if we are moving forward
             read_next_interface_block(block_header);            
@@ -215,7 +215,7 @@ std::optional<Packet> FileReader::read_packet() {
     return {};
 }
 
-std::unique_ptr<AbstractPcapngBlock> FileReader::read_next_block(const BlockHeader& block_header) {
+std::unique_ptr<AbstractPcapngBlock> FileReader::read_block(const BlockHeader& block_header) {
     //                         1                   2                   3
     //     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     //    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -522,7 +522,7 @@ void FileReader::read_next_interface_block(const BlockHeader& block_header) {
         file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
         return;
     }
-    auto&& new_elem {interfaces_.emplace_back(dynamic_cast<InterfaceDescriptionBlock*>(read_next_block(block_header).release()))};
+    auto&& new_elem {interfaces_.emplace_back(dynamic_cast<InterfaceDescriptionBlock*>(read_block(block_header).release()))};
     assert(bool(new_elem));
     last_interface_offset_ = file_stream_.tellg() - static_cast<std::streampos>(block_header.length);
     assert(last_interface_offset_ >= 0 && last_interface_offset_ % 4 == 0);

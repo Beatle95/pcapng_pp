@@ -49,7 +49,7 @@ SectionHeaderBlock::SectionHeaderBlock(uint32_t magic, uint16_t ver_major, uint1
 {    
 }
 
-SectionHeaderBlock::Version SectionHeaderBlock::get_version() const {
+Version SectionHeaderBlock::get_version() const {
     return version_;
 }
 
