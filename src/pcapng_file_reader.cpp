@@ -89,7 +89,7 @@ namespace {
         constexpr auto alignment {sizeof(uint32_t)};
         return len % sizeof(uint32_t) == 0 ? len : (len / alignment + 1) * alignment;
     }
-}
+} // namespace
 
 FileReader::FileReader(const std::filesystem::path& p)
     : file_path_ {std::filesystem::weakly_canonical(p)}
