@@ -15,7 +15,7 @@ Packet::Packet(std::unique_ptr<SimplePacketBlock>&& packet_block)
     assert(bool(packet_block_));
 }
     
-Span<const uint8_t> Packet::get_packet_data() const {
+Span<const byte_t> Packet::get_packet_data() const {
     return packet_block_->get_packet_data();
 }
 

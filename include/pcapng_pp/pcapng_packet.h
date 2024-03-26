@@ -11,7 +11,7 @@ namespace pcapng_pp {
             Packet(SimplePacketBlock *packet_block);
             Packet(std::unique_ptr<SimplePacketBlock>&& packet_block);
 
-            Span<const uint8_t> get_packet_data() const;
+            Span<const byte_t> get_packet_data() const;
             Interface get_interface() const;
 
             size_t get_captured_length() const;

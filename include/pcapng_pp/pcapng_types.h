@@ -8,6 +8,7 @@
 namespace pcapng_pp {
     // we are targeting compilers with no c++20 support, so use non-standard span implementation
     template<typename T> using Span = tcb::span<T>;
+    using byte_t = unsigned char;
     
     struct Version {
         uint16_t major;
@@ -20,7 +21,7 @@ namespace pcapng_pp {
     };
 
     struct BlockOption {
-        std::vector<uint8_t> data;
+        std::vector<byte_t> data;
         uint16_t custom_option_code;
     };
 

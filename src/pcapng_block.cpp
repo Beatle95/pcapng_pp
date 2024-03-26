@@ -18,7 +18,7 @@ bool AbstractPcapngBlock::is_option_exists(uint16_t option_code) const {
     return it != options_.end();
 }
 
-Span<const uint8_t> AbstractPcapngBlock::get_option_data(uint16_t option_code) const {
+Span<const byte_t> AbstractPcapngBlock::get_option_data(uint16_t option_code) const {
     const auto it {std::find_if(options_.begin(), options_.end(), [option_code](auto&& elem) { return elem.custom_option_code == option_code; })};
     if (it == options_.end()) {
         return {};
@@ -82,7 +82,7 @@ InterfaceBlockPtr SimplePacketBlock::get_interface() const {
     return interface_;
 }
 
-Span<const uint8_t> SimplePacketBlock::get_packet_data() const {
+Span<const byte_t> SimplePacketBlock::get_packet_data() const {
     return packet_data_;
 }
 
@@ -98,11 +98,11 @@ uint64_t SimplePacketBlock::get_timestamp() const {
     return 0;
 }
 
-void SimplePacketBlock::set_data(const std::vector<uint8_t>& data) {
+void SimplePacketBlock::set_data(const std::vector<byte_t>& data) {
     packet_data_ = data;
 }
 
-void SimplePacketBlock::set_data(std::vector<uint8_t>&& data) {
+void SimplePacketBlock::set_data(std::vector<byte_t>&& data) {
     packet_data_ = std::move(data);
 }
 
