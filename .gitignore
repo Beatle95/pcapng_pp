@@ -36,3 +36,4 @@
 /.vs
 .DS_Store
 tests/path.h
+CMakeSettings.json
