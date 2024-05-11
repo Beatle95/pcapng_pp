@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <tcb/span.hpp>
 
 namespace pcapng_pp {
     // we are targeting compilers with no c++20 support, so use non-standard span implementation
