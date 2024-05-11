@@ -36,19 +36,19 @@ class FileStreamCursorSaver {
 
 namespace {
     template<typename T>
-    T read_value_from_stream(std::ifstream& stream) {
+    T get_value_from_stream(std::ifstream& stream) {
+        static_assert(std::is_trivial_v<T>);
         T result;
         stream.read(reinterpret_cast<char*>(&result), sizeof(result));
-        if (stream.gcount() != sizeof(result))
+        if (stream.gcount() != sizeof(result)) {
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
+        }
         return result;
     }
 
     BlockHeader read_block_header(std::ifstream& stream) {
         static_assert(sizeof(BlockHeader) == 2 * sizeof(uint32_t));
-        BlockHeader result;
-        result.type = read_value_from_stream<uint32_t>(stream);
-        result.length = read_value_from_stream<uint32_t>(stream);
+        auto result {get_value_from_stream<BlockHeader>(stream)};
         // length of block must be on a 32 bit boundary
         if ((result.length % blocks_alignment) != 0 || result.length < block_base_len) {
             throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -231,7 +231,7 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_block(const BlockHeader& b
     assert((block_header.length % blocks_alignment) == 0 && block_header.length >= block_base_len);
     auto block_ptr {read_correct_block(block_header)};
     // read footer
-    const auto footer_len {read_value_from_stream<uint32_t>(file_stream_)};
+    const auto footer_len {get_value_from_stream<uint32_t>(file_stream_)};
     if (footer_len != block_header.length) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
@@ -287,10 +287,10 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_section_block(size_t size)
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
     auto block {std::make_unique<SectionHeaderBlock>(
-        read_value_from_stream<uint32_t>(file_stream_),
-        read_value_from_stream<uint16_t>(file_stream_),
-        read_value_from_stream<uint16_t>(file_stream_),
-        read_value_from_stream<uint64_t>(file_stream_)
+        get_value_from_stream<uint32_t>(file_stream_),
+        get_value_from_stream<uint16_t>(file_stream_),
+        get_value_from_stream<uint16_t>(file_stream_),
+        get_value_from_stream<uint64_t>(file_stream_)
     )};
     size -= pcapng_section_header_len;
     if (size >= min_option_len) {
@@ -323,9 +323,9 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_interface_block(size_t siz
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
     auto block {std::make_unique<InterfaceDescriptionBlock>(
-        read_value_from_stream<uint16_t>(file_stream_),
-        read_value_from_stream<uint16_t>(file_stream_),
-        read_value_from_stream<uint32_t>(file_stream_)
+        get_value_from_stream<uint16_t>(file_stream_),
+        get_value_from_stream<uint16_t>(file_stream_),
+        get_value_from_stream<uint32_t>(file_stream_)
     )};
     size -= pcapng_interface_block_len;
     if (size >= min_option_len) {
@@ -356,7 +356,7 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_simple_packet_block(size_t
     if (size < sizeof(uint32_t)) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
-    const auto data_size {read_value_from_stream<uint32_t>(file_stream_)};
+    const auto data_size {get_value_from_stream<uint32_t>(file_stream_)};
     size -= sizeof(uint32_t);
     if (data_size > size) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -407,11 +407,11 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_enchanced_packet_block(siz
     if (size < pcapng_enchanced_packet_len) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
-    const auto iface_id {read_value_from_stream<uint32_t>(file_stream_)};
-    const auto timestamp_high {read_value_from_stream<uint32_t>(file_stream_)};
-    const auto timestamp_low {read_value_from_stream<uint32_t>(file_stream_)};
-    const auto captured_len {read_value_from_stream<uint32_t>(file_stream_)};
-    const auto original_capture_length {read_value_from_stream<uint32_t>(file_stream_)};
+    const auto iface_id {get_value_from_stream<uint32_t>(file_stream_)};
+    const auto timestamp_high {get_value_from_stream<uint32_t>(file_stream_)};
+    const auto timestamp_low {get_value_from_stream<uint32_t>(file_stream_)};
+    const auto captured_len {get_value_from_stream<uint32_t>(file_stream_)};
+    const auto original_capture_length {get_value_from_stream<uint32_t>(file_stream_)};
     size -= pcapng_enchanced_packet_len;
     if (iface_id >= interfaces_.size() || captured_len > size) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
@@ -453,10 +453,10 @@ std::unique_ptr<AbstractPcapngBlock> FileReader::read_custom_nonstandard_block(s
     if (size < pcapng_custom_nonstandard_block_len) {
         throw PcapngError {ErrorCode::wrong_format_or_damaged};
     }
-    const auto len {read_value_from_stream<uint32_t>(file_stream_)};
+    const auto len {get_value_from_stream<uint32_t>(file_stream_)};
     auto block {std::make_unique<CustomNonstandardBlock>(
-        read_value_from_stream<uint32_t>(file_stream_),
-        read_value_from_stream<uint32_t>(file_stream_)
+        get_value_from_stream<uint32_t>(file_stream_),
+        get_value_from_stream<uint32_t>(file_stream_)
     )};
     size -= pcapng_custom_nonstandard_block_len;
     if (size < len) {
@@ -494,8 +494,8 @@ void FileReader::read_block_options(size_t bytes_to_block_end, AbstractPcapngBlo
         }
 
         BlockOption new_opt {};
-        new_opt.custom_option_code = read_value_from_stream<uint16_t>(file_stream_);
-        const auto len {read_value_from_stream<uint16_t>(file_stream_)};
+        new_opt.custom_option_code = get_value_from_stream<uint16_t>(file_stream_);
+        const auto len {get_value_from_stream<uint16_t>(file_stream_)};
         if (new_opt.custom_option_code == option_endofopt) {
             break;
         }
