@@ -49,7 +49,6 @@ namespace pcapng_pp {
             const PcapngBlockType type_;
     };
 
-
     class SectionHeaderBlock final : public AbstractPcapngBlock {
         public:
             SectionHeaderBlock(uint32_t magic, uint16_t ver_major, uint16_t ver_minor, uint64_t len);
@@ -73,7 +72,6 @@ namespace pcapng_pp {
             uint16_t link_type_;
             uint16_t reserved_;
     };
-
 
     class SimplePacketBlock : public AbstractPcapngBlock {
         public:
@@ -101,7 +99,6 @@ namespace pcapng_pp {
             InterfaceBlockPtr interface_;
     };
 
-
     class EnchancedPacketBlock final : public SimplePacketBlock {
         public:
             EnchancedPacketBlock(uint32_t t_high, uint32_t t_low, uint32_t original_len);
@@ -112,7 +109,6 @@ namespace pcapng_pp {
             uint64_t timestamp_;
             uint32_t original_capture_length_;
     };
-
 
     class CustomNonstandardBlock final : public SimplePacketBlock {
         public:

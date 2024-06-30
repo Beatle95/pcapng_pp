@@ -5,13 +5,13 @@
 #include "pcapng_types.h"
 
 namespace pcapng_pp {
-    enum class OpenMode { trunc, append, require_new };
-
     class FileWriter {
         public:
-            FileWriter(const std::filesystem::path& file_path, OpenMode mode);
-            void write_interface(uint16_t link_type, uint32_t snap_len = 0xffff);
+            FileWriter(const std::filesystem::path& file_path);
             void write_packet(Span<const byte_t> packet_data);
+
+        private:
+            void write_preamble();
 
         private:
             std::ofstream stream_;

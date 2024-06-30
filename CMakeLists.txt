@@ -21,6 +21,7 @@ add_library(
     src/pcapng_block.cpp
     src/pcapng_packet.cpp
     src/pcapng_interface.cpp
+    src/pcapng_functions.cpp
 )
 
 # 'span' library contains tests which is not supported by ARM processors

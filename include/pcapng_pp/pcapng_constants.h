@@ -9,11 +9,14 @@ namespace pcapng_pp::constants {
     constexpr uint32_t section_header_block {0x0A0D0D0A};
     constexpr uint32_t custom_data_block {0xB16B00B5};
     constexpr uint32_t unknown_data_block {0xDEADBEEF};
+    constexpr uint32_t byte_order_magic {0x1A2B3C4D};
 
     constexpr uint16_t option_endofopt	{0};
     constexpr uint16_t option_comment {1};
     constexpr uint16_t option_shb_hardware {2};
     constexpr uint16_t option_shb_os {3};
     constexpr uint16_t option_shb_userappl {4};
+
+    constexpr uint16_t ethernet_link_type {1};
 }
 #endif // __PCAPNG_CONSTANTS_H__
