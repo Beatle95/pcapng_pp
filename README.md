@@ -8,7 +8,7 @@ At this moment only reading is implemented.
 
 # Reading usage example:
 
-```
+```cpp
 FileReader reader("file.pcapng");
 while (auto packet = reader.read_packet()) {
     auto packet_data = packet.value().get_packet_data();
