@@ -7,3 +7,7 @@ configure_file(path.h.in ${CMAKE_CURRENT_SOURCE_DIR}/path.h)
 add_executable (reading_tests ${CMAKE_CURRENT_SOURCE_DIR}/reading_tests.cpp)
 target_link_libraries (reading_tests PUBLIC gtest_main pcapng_pp)
 add_test (NAME reading_tests COMMAND reading_tests)
+
+add_executable (write_read_tests ${CMAKE_CURRENT_SOURCE_DIR}/write_read_tests.cpp)
+target_link_libraries (write_read_tests PUBLIC gtest_main pcapng_pp)
+add_test (NAME write_read_tests COMMAND write_read_tests)

@@ -1,11 +1,14 @@
 #include "pcapng_pp/pcapng_file_reader.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include "pcapng_pp/pcapng_error.h"
 #include "pcapng_pp/pcapng_constants.h"
+#include "pcapng_pp/pcapng_functions.h"
 
 using namespace pcapng_pp;
 using namespace pcapng_pp::constants;
+using namespace pcapng_pp::functions;
 
 constexpr size_t block_base_len {3 * sizeof(uint32_t)};
 constexpr size_t blocks_alignment {sizeof(uint32_t)};
@@ -38,11 +41,6 @@ namespace {
 
     bool is_packet_block_type(uint32_t t) {
         return t == simple_packet_block || t == enchanced_packet_block;
-    }
-
-    size_t get_4_byte_aligned_len(size_t len) {
-        constexpr auto alignment {sizeof(uint32_t)};
-        return len % sizeof(uint32_t) == 0 ? len : (len / alignment + 1) * alignment;
     }
 
     template<typename T>
@@ -502,7 +500,9 @@ void FileReader::read_next_interface_block(const BlockHeader& block_header) {
         file_stream_.seekg(block_header.length - sizeof(BlockHeader), std::ios::cur);
         return;
     }
-    auto&& new_elem {interfaces_.emplace_back(dynamic_cast<InterfaceDescriptionBlock*>(read_block(block_header).release()))};
+    auto&& new_elem {interfaces_.emplace_back(
+        dynamic_cast<InterfaceDescriptionBlock*>(read_block(block_header).release())
+    )};
     assert(bool(new_elem));
     last_interface_offset_ = file_stream_.tellg() - static_cast<std::streampos>(block_header.length);
     assert(last_interface_offset_ >= 0 && last_interface_offset_ % 4 == 0);

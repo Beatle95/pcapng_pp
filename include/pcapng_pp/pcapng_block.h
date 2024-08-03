@@ -49,7 +49,6 @@ namespace pcapng_pp {
             const PcapngBlockType type_;
     };
 
-
     class SectionHeaderBlock final : public BasePcapngBlock {
         public:
             SectionHeaderBlock(uint32_t magic, uint16_t ver_major, uint16_t ver_minor, uint64_t len);

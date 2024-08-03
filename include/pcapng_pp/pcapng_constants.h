@@ -16,5 +16,7 @@ namespace pcapng_pp::constants {
     constexpr uint16_t option_shb_hardware {2};
     constexpr uint16_t option_shb_os {3};
     constexpr uint16_t option_shb_userappl {4};
+
+    constexpr uint16_t ethernet_link_type {1};
 }
 #endif // __PCAPNG_CONSTANTS_H__

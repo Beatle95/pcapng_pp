@@ -18,6 +18,7 @@ add_library(
     src/pcapng_packet.cpp
     src/pcapng_interface.cpp
     src/pcapng_packet_block.cpp
+    src/pcapng_functions.cpp
 )
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
