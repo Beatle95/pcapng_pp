@@ -6,29 +6,30 @@
 using namespace pcapng_pp;
 
 TEST(FileReader, Opening) {
-    {
+    try {
         const auto file_path {std::filesystem::u8path(test_resources_path) / "simple_correct.pcapng"};
         ASSERT_TRUE(std::filesystem::exists(file_path)) << "Test file not found";
         FileReader reader {file_path};
-        ASSERT_NO_THROW(reader.open());
+    } catch (...) {
+        ASSERT_TRUE(false) << "Mustn't throw";
     }
     
-    {
+    try {
         const auto file_path {std::filesystem::u8path(test_resources_path) / "correct_with_options.pcapng"};
-        ASSERT_TRUE(std::filesystem::exists(file_path)) << "Test file not found";
+        ASSERT_TRUE(std::filesystem::exists(file_path)) << "Test file not found";        
         FileReader reader {file_path};
-        ASSERT_NO_THROW(reader.open());
         ASSERT_EQ(reader.get_file_info().file_comment, "Hello world");
+    } catch (...) {
+        ASSERT_TRUE(false) << "Mustn't throw";
     }
 }
 
 TEST(FileReader, Reading) {
-    {
+    try {
         const auto file_path {std::filesystem::u8path(test_resources_path) / "simple_correct.pcapng"};
         ASSERT_TRUE(std::filesystem::exists(file_path)) << "Test file not found";
         FileReader reader {file_path};
-        ASSERT_NO_THROW(reader.open());
-        ASSERT_EQ(reader.get_total_packet_count(), 4);
+        ASSERT_EQ(reader.get_total_packets_count(), 4);
 
         auto packet_opt = reader.read_packet();
         ASSERT_TRUE(packet_opt.has_value());
@@ -38,7 +39,7 @@ TEST(FileReader, Reading) {
         ASSERT_TRUE(packet_data[48] == 0x3D);
         ASSERT_TRUE(packet_data[0x131] == 0x2A);
 
-        ASSERT_EQ(reader.get_total_packet_count(), 4);
+        ASSERT_EQ(reader.get_total_packets_count(), 4);
 
         packet_opt = reader.read_packet();
         packet_data = packet_opt.value().get_packet_data();
@@ -72,16 +73,19 @@ TEST(FileReader, Reading) {
         ASSERT_EQ(packet_data.size(), 342);
         ASSERT_EQ(packet_data[1], 0x0B);
         ASSERT_EQ(packet_data[0x120], 0xFF);
+    } catch (...) {
+        ASSERT_TRUE(false) << "Mustn't throw";
     }
     
-    {
+    try {
         const auto file_path {std::filesystem::u8path(test_resources_path) / "correct_with_options.pcapng"};
         ASSERT_TRUE(std::filesystem::exists(file_path)) << "Test file not found";
         FileReader reader {file_path};
-        ASSERT_NO_THROW(reader.open());
-        ASSERT_EQ(reader.get_total_packet_count(), 0);
+        ASSERT_EQ(reader.get_total_packets_count(), 0);
 
         auto packet_opt = reader.read_packet();
         ASSERT_FALSE(packet_opt.has_value());
+    } catch (...) {
+        ASSERT_TRUE(false) << "Mustn't throw";
     }
 }

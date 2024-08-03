@@ -6,10 +6,10 @@ namespace pcapng_pp {
     enum class ErrorCode {
         undefined,
         unable_to_open,
+        wrong_magic_number,
         wrong_format_or_damaged,
         size_mismatch,
-        unknown_block_type,
-        file_not_opened
+        unknown_block_type
     };
 
     class PcapngError : public std::exception {

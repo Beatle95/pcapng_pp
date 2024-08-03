@@ -9,10 +9,6 @@ project(
 
 option(ENABLE_TESTS "Enable tests" OFF)
 
-set(CMAKE_CXX_STANDARD          17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS       OFF)
-
 add_library(
     ${PROJECT_NAME} STATIC
     src/pcapng_file_reader.cpp
@@ -21,7 +17,10 @@ add_library(
     src/pcapng_block.cpp
     src/pcapng_packet.cpp
     src/pcapng_interface.cpp
+    src/pcapng_packet_block.cpp
 )
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # 'span' library contains tests which is not supported by ARM processors
 # so we just add additional include directory for this library

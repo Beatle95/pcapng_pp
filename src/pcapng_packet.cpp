@@ -1,15 +1,9 @@
 #include "pcapng_pp/pcapng_packet.h"
-#include <assert.h>
+#include <cassert>
 
 using namespace pcapng_pp;
     
-Packet::Packet(SimplePacketBlock *packet_block)
-    : packet_block_ {packet_block}
-{
-    assert(bool(packet_block_));
-}
-
-Packet::Packet(std::unique_ptr<SimplePacketBlock>&& packet_block)
+Packet::Packet(std::unique_ptr<PacketBlock> packet_block)
     : packet_block_ {std::move(packet_block)}
 {
     assert(bool(packet_block_));
